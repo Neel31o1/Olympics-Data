@@ -1,0 +1,427 @@
+1) Write a SQL query to find the total no of Olympic Games held
+
+A) SELECT COUNT(DISTINCT(GAMES)) AS total_games_held 
+   FROM olympics_history
+
+
+2) Write a SQL query to list down all the Olympic Games held so far
+
+A) SELECT 
+	games, year, season
+   FROM olympics_history
+   GROUP BY games, year, season
+   ORDER BY 2
+
+
+3) Write a SQL query to fetch total no of countries participated in each olympic games
+
+A) SELECT 
+	games, 
+	COUNT(DISTINCT(noc)) AS nations_participated
+   FROM olympics_history
+   GROUP BY games
+   ORDER BY 1
+
+4) Write a SQL query to return the Olympic Games which had the highest and 
+   lowest participating countries
+
+A) WITH lowest_nations_participated AS (
+	SELECT 
+		games, 
+		COUNT(DISTINCT(noc)) AS nations_participated
+	FROM olympics_history
+	GROUP BY games
+	ORDER BY 1
+	LIMIT 1),
+
+	highest_nations_participated AS (
+	SELECT 
+		games, 
+		COUNT(DISTINCT(noc)) AS nations_participated
+	FROM olympics_history
+	GROUP BY games
+	ORDER BY 1 DESC
+	LIMIT 1
+	)
+
+   SELECT *
+   FROM lowest_nations_participated, highest_nations_participated
+
+5) Write a SQL query to return the list of countries who have been part of 
+   every Olympics games
+
+A) WITH total_games AS (
+	SELECT 
+		COUNT(DISTINCT(games)) AS total_games_held
+	FROM olympics_history
+   ), countries AS (
+	SELECT 
+		oh.games, ohnr.noc AS country
+	FROM olympics_history oh
+	JOIN olympics_history_noc_regions ohnr
+		ON oh.noc = ohnr.noc
+	GROUP BY oh.games, ohnr.noc
+	ORDER BY 1
+   ) , countries_participated AS (
+	SELECT 
+		country, COUNT(1) AS total_participated_games
+	FROM countries
+	GROUP BY country
+   )
+
+   SELECT * 
+   FROM countries_participated cp
+   JOIN total_games tg 
+	ON tg.total_games_held = cp.total_participated_games
+   
+
+6) Write a SQL query to fetch the list of all sports which have been part of 
+   every summer olympics	
+
+A) WITH total_summer_games AS(
+	SELECT 
+		COUNT(DISTINCT(games)) AS total_summer_games_held
+	FROM olympics_history 
+	WHERE season = 'Summer'
+   ), total_sport AS (
+	SELECT 
+		DISTINCT(sport), games
+	FROM olympics_history
+	WHERE season = 'Summer'
+	ORDER BY 2
+   ), total_sport_games AS (
+	SELECT 
+		sport, COUNT(games) AS total_games
+	FROM total_sport
+	GROUP BY sport
+   )
+
+
+   SELECT *
+   FROM total_sport_games tg
+   JOIN total_summer_games tsg
+	ON tsg.total_summer_games_held = tg.total_games
+
+
+7) Write a SQL query to fetch which Sports were just played only once in the olympics
+
+A) WITH total_games AS(
+	SELECT 
+		DISTINCT(games), 
+		sport
+	FROM olympics_history
+   ), times_sport_played AS(
+	SELECT
+		sport,
+		COUNT(1) AS no_of_sport
+	FROM total_games
+	GROUP BY sport
+   )
+
+   SELECT 
+	total_games.games,
+	times_sport_played.sport,
+	times_sport_played.no_of_sport AS times_played
+   FROM total_games
+   JOIN times_sport_played ON 
+	total_games.sport = times_sport_played.sport
+   WHERE times_sport_played.no_of_sport = 1	
+
+
+8) Write a SQL query to fetch the total no of sports played in each olympics
+
+A) SELECT 
+	games, COUNT(DISTINCT(Sport)) 
+   FROM olympics_history
+   GROUP BY games
+   ORDER BY COUNT(DISTINCT(Sport)) DESC, 1
+
+
+9) Write a SQL query to fetch gold medalist of top age 
+
+A) WITH gold_medalist AS(
+	SELECT
+		CAST(CASE WHEN age = 'NA' THEN 0 ELSE age END AS INT) AS age,
+        team, games, name, sport, medal
+	FROM olympics_history
+   ), ranking AS(
+	SELECT 
+		*, RANK() OVER(ORDER BY age DESC) as rnk
+	FROM gold_medalist
+   )
+
+   SELECT *
+   FROM ranking
+   WHERE rnk = 1
+
+10) Write a SQL query to get the ratio of male and female participants
+
+A) WITH total_population AS(
+	SELECT CAST(COUNT(*) AS DECIMAL) AS population
+	FROM olympics_history
+   ), male_population AS(
+	SELECT CAST(COUNT(sex) AS DECIMAL) AS total_male
+	FROM olympics_history
+	WHERE sex = 'M'
+   ), female_population AS(
+	SELECT CAST(COUNT(sex) AS DECIMAL) AS total_female
+	FROM olympics_history
+	WHERE sex = 'F'
+   )
+
+   SELECT 
+	CONCAT('1: ', ROUND(mp.total_male / fp.total_female, 2)) AS male_female_ratio
+   FROM male_population mp , female_population fp
+		
+
+11) Write a SQL query to fetch the top 5 athletes who have won the most gold medals
+
+A) WITH gold_medalist AS(
+	SELECT 
+		name, team, COUNT(medal) AS total_gold_medals
+	FROM olympics_history
+	WHERE medal = 'Gold' 
+	GROUP BY name, team, medal
+   )
+	
+   SELECT * 
+   FROM gold_medalist
+   ORDER BY 3 DESC
+   LIMIT 5
+
+
+12) Write a SQL query to fetch the top 5 athletes who have won the 
+    most medals in gold or silver or bronze
+
+A) WITH top_medalist AS(
+	SELECT 
+		name, team, COUNT(1) AS total_medals
+	FROM olympics_history
+	WHERE medal IN ('Silver', 'Bronze', 'Gold')
+	GROUP BY name, team
+   )
+
+   SELECT * FROM top_medalist 
+   ORDER BY 3 DESC LIMIT 5 
+
+
+13) Write a SQL query to fetch the top 5 countries who have won the 
+    most medals in gold or silver or bronze
+
+A) WITH top_medalist_countries AS (
+	SELECT 
+		ohnc.region, COUNT(1) AS total_medals
+	FROM olympics_history oh
+	JOIN olympics_history_noc_regions ohnc
+		ON oh.noc = ohnc.noc
+	WHERE medal IN ('Gold', 'Silver', 'Bronze')
+	GROUP BY ohnc.region
+)	
+
+   SELECT * FROM top_medalist_countries
+   ORDER BY 2 DESC LIMIT 5
+
+
+14) Write a SQL query to list down total 
+    gold, silver and bronze medals won by each country
+
+A) SELECT 
+	ohnc.region, 
+	COUNT(CASE WHEN medal = 'Gold' THEN 1 END) AS total_gold_medals,
+	COUNT(CASE WHEN medal = 'Silver' THEN 1 END) AS total_silver_medals,
+	COUNT(CASE WHEN medal = 'Bronze' THEN 1 END) AS total_bronze_medals	
+   FROM olympics_history oh
+   JOIN olympics_history_noc_regions ohnc
+	ON oh.noc = ohnc.noc
+   GROUP BY ohnc.region
+   ORDER BY 2 DESC, 3 DESC, 4 DESC
+   LIMIT 5
+
+
+15) Write a SQL query to list down the total 
+    gold, silver and bronze medals won by each country 
+    corresponding to each olympic games
+
+A) SELECT 
+	oh.games, 
+	ohnc.region,
+	COUNT(CASE WHEN medal = 'Gold' THEN 1 END) AS total_gold_medals,
+	COUNT(CASE WHEN medal = 'Silver' THEN 1 END) AS total_silver_medals,
+	COUNT(CASE WHEN medal = 'Bronze' THEN 1 END) AS total_bronze_medals	
+   FROM olympics_history oh
+   JOIN olympics_history_noc_regions ohnc
+	ON oh.noc = ohnc.noc
+   GROUP BY oh.games, ohnc.region
+   ORDER BY 1, 2, 3 DESC, 4 DESC, 5 DESC
+
+
+
+16) Write a SQL query to display for each olympic games, 
+    which country won the highest gold, silver and bronze medals
+
+
+A) WITH medal_per_region AS(
+	SELECT 
+		oh.games, 
+		ohnc.region, 
+ 		SUM(CASE WHEN oh.medal = 'Gold' THEN 1 ELSE 0 END) AS gold_medal,
+ 		SUM(CASE WHEN oh.medal = 'Silver' THEN 1 ELSE 0 END) AS silver_medal,
+ 		SUM(CASE WHEN oh.medal = 'Bronze' THEN 1 ELSE 0 END) AS bronze_medal
+	FROM olympics_history oh
+	JOIN olympics_history_noc_regions ohnc
+		ON oh.noc = ohnc.noc
+	WHERE oh.medal <> '[null]'	
+	GROUP BY 1, 2
+	)
+
+	SELECT 
+		DISTINCT(games), 
+		CONCAT(
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY gold_medal DESC),
+			' - ',
+			FIRST_VALUE(gold_medal) OVER(PARTITION BY games ORDER BY gold_medal DESC)	
+		)  AS max_gold,
+		CONCAT(
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY silver_medal DESC),
+			' - ',
+			FIRST_VALUE(silver_medal) OVER(PARTITION BY games ORDER BY silver_medal DESC)	
+		)  AS max_silver,
+		CONCAT(
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY bronze_medal DESC),
+			' - ',
+			FIRST_VALUE(bronze_medal) OVER(PARTITION BY games ORDER BY bronze_medal DESC)	
+		)  AS max_bronze
+	FROM medal_per_region
+	ORDER BY 1
+
+
+17) Write a SQL query to display for each olympic games, 
+    which country won the highest gold, silver and bronze medals 
+    and identify country with maximum medals
+
+A) WITH medal_per_region AS(
+	SELECT 
+		oh.games, 
+		ohnc.region, 
+ 		SUM(CASE WHEN oh.medal = 'Gold' THEN 1 ELSE 0 END) AS gold_medal,
+ 		SUM(CASE WHEN oh.medal = 'Silver' THEN 1 ELSE 0 END) AS silver_medal,
+ 		SUM(CASE WHEN oh.medal = 'Bronze' THEN 1 ELSE 0 END) AS bronze_medal,
+ 		SUM(CASE WHEN oh.medal <> 'NA' THEN 1 ELSE 0 END) AS total_medal
+	FROM olympics_history oh
+	JOIN olympics_history_noc_regions ohnc
+		ON oh.noc = ohnc.noc
+	WHERE oh.medal <> '[null]'	
+	GROUP BY 1, 2
+	)
+
+	SELECT 
+		DISTINCT(games), 
+		CONCAT(
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY gold_medal DESC),
+			' - ',
+			FIRST_VALUE(gold_medal) OVER(PARTITION BY games ORDER BY gold_medal DESC)	
+		)  AS max_gold,
+		CONCAT(
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY silver_medal DESC),
+			' - ',
+			FIRST_VALUE(silver_medal) OVER(PARTITION BY games ORDER BY silver_medal DESC)	
+		)  AS max_silver,
+		CONCAT(
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY bronze_medal DESC),
+			' - ',
+			FIRST_VALUE(bronze_medal) OVER(PARTITION BY games ORDER BY bronze_medal DESC)	
+		)  AS max_bronze,
+		CONCAT (
+			FIRST_VALUE(region) OVER(PARTITION BY games ORDER BY total_medal DESC),
+			' - ',
+			FIRST_VALUE(total_medal) OVER(PARTITION BY games ORDER BY total_medal DESC)
+		) AS max_medal
+	FROM medal_per_region
+	ORDER BY 1
+
+
+18) Write a SQL Query to fetch details of countries which have 
+    won silver or bronze medal but never won a gold medal
+
+
+A) WITH country_medals AS ( SELECT 
+	ohnc.region AS country,
+	SUM(CASE WHEN oh.medal = 'Silver' THEN 1 ELSE 0 END) AS silver_medal,
+	SUM(CASE WHEN oh.medal = 'Bronze' THEN 1 ELSE 0 END) AS bronze_medal,
+	SUM(CASE WHEN oh.medal = 'Gold' THEN 1 ELSE 0 END) AS gold_medal
+   FROM olympics_history oh
+   JOIN olympics_history_noc_regions ohnc
+	ON oh.noc = ohnc.noc
+   GROUP BY 1)
+
+   SELECT 
+	country, silver_medal, bronze_medal
+   FROM country_medals
+   WHERE gold_medal = 0 
+   ORDER BY 2 DESC 
+
+
+19) Write a SQL Query to return the sport in which India has won 
+    the highest no of medals
+
+A) WITH india_medal AS (
+	SELECT 
+		oh.sport,
+		COUNT(1) AS total_medals
+	FROM olympics_history oh
+	JOIN olympics_history_noc_regions ohnc
+		ON oh.noc = ohnc.noc
+	WHERE ohnc.region = 'India'
+	GROUP BY oh.sport
+   )
+
+   SELECT * FROM india_medal
+   ORDER BY 2 DESC 
+   LIMIT 1
+
+
+20) Write a SQL Query to return medals by games won by India 
+    in hockey sport
+
+A) WITH india_medal AS (
+	SELECT 
+		oh.sport,
+		oh.games,
+		COUNT(1) AS total_medals
+	FROM olympics_history oh
+	JOIN olympics_history_noc_regions ohnc
+		ON oh.noc = ohnc.noc
+	WHERE ohnc.region = 'India' AND oh.sport = 'Hockey'
+	GROUP BY oh.sport, oh.games
+   )
+
+   SELECT * FROM india_medal	
+   ORDER BY 3 DESC 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
