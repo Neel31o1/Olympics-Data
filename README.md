@@ -10,3 +10,5 @@ including athletes, countries, sports, and medal outcomes.
 - Conducted a nuanced analysis, calculating gender participation ratios and highlighting top performers in gold, overall medals, and country-wise achievements.
 - Integrated and harmonized both datasets, facilitating a comprehensive examination.
 - Utilize and tailor these SQL queries for nuanced analysis and insights within the Olympic dataset.
+
+![14](https://github.com/Neel31o1/Olympics_Data/assets/77343664/d7eb7315-e030-46ba-8d25-c9fb552037be)
