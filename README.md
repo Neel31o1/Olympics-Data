@@ -3,8 +3,7 @@ This project focuses on analyzing Olympic data using PostgreSQL queries.
 The dataset used in this project is obtained from Kaggle and contains information about various Olympic events, 
 including athletes, countries, sports, and medal outcomes.
 
-## Olympic Dataset SQL Overview
-
+**OVERVIEW**
 - Employed two CSV files: "nations" (231 records) providing region-related data and "athletes" (135,571 records) detailing athlete-specific information.
 - Executed queries yielding insights on total games, participating nations, top athletes, and medal distributions.
 - Identified patterns in consistent country participation, isolated one-time sports, and assessed India's hockey performance.
